@@ -35,9 +35,8 @@ int db_init(sqlite3 **out_db, const char *filename) {
         return 0;
     }
 
-    // Migration: ajouter la colonne rainfall si elle n'existe pas
     const char *migration_sql = "ALTER TABLE readings ADD COLUMN rainfall REAL NOT NULL DEFAULT 0.0;";
-    sqlite3_exec(db, migration_sql, NULL, NULL, NULL);  // Ignorer l'erreur si la colonne existe déjà
+    sqlite3_exec(db, migration_sql, NULL, NULL, NULL); 
 
     const char *seed_sql =
         "INSERT INTO readings (temperature, humidity, luminosity, rainfall) "

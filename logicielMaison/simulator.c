@@ -18,10 +18,10 @@ static gboolean simulator_cb(gpointer user_data) {
         return G_SOURCE_CONTINUE;
     }
 
-    double dt = ((rand() % 21) - 10) / 20.0;  // -0.5 à +0.5
-    double dh = ((rand() % 21) - 10) / 10.0;  // -1.0 à +1.0
-    double dl = ((rand() % 101) - 50) * 3.0;  // -150 à +150
-    double dr = ((rand() % 6) - 2) * 0.5;     // -1.0 à +2.5 (pluie en mm)
+    double dt = ((rand() % 21) - 10) / 20.0;  
+    double dh = ((rand() % 21) - 10) / 10.0; 
+    double dl = ((rand() % 101) - 50) * 3.0;  
+    double dr = ((rand() % 6) - 2) * 0.5;     
 
     t = clamp(t + dt, 15.0, 35.0);
     h = clamp(h + dh, 20.0, 80.0);
