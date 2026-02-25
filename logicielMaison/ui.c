@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 static AppState *G_ST = NULL;
+static GtkStack *G_STACK = NULL; 
 
 static void apply_css(void) {
     const char *css =
@@ -12,8 +13,11 @@ static void apply_css(void) {
         ".sub { color: #b9c7e6; font-size: 13px; }"
         ".card { background: rgba(255,255,255,0.06); border-radius: 16px; border: 1px solid rgba(255,255,255,0.10); }"
         ".card-title { color: #b9c7e6; font-size: 14px; font-weight: 600; }"
-        ".card-value { color: #e7eefc; font-size: 34px; font-weight: 800; }"
-        ".status { color: #b9c7e6; font-size: 12px; }";
+        ".card-value { color: #e7eefc; font-size: 34px; font-weight: 800; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; padding: 8px 16px; }"
+        ".status { color: #b9c7e6; font-size: 12px; }"
+        ".menu-bar { background: rgba(255,255,255,0.06); border-radius: 10px; border: 1px solid rgba(255,255,255,0.10); }"
+        ".menu-title { color: #e7eefc; font-size: 18px; font-weight: 700; }"
+        ".card-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 16px; color: white; font-weight: 700; font-size: 27px; }";
 
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider, css);
@@ -83,36 +87,18 @@ static gboolean refresh_ui_cb(gpointer user_data) {
     return G_SOURCE_CONTINUE;
 }
 
-static void on_activate(GtkApplication *app, gpointer user_data) {
-    (void)user_data;
-    if (!G_ST) return;
+// Construit la vue Dashboard et renseigne les labels dans G_ST
+static GtkWidget* build_dashboard_view(void) {
+    GtkWidget *page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
 
-    apply_css();
+    // Titre principal retiré
 
-    GtkWidget *win = gtk_application_window_new(app);
-    gtk_window_set_title(GTK_WINDOW(win), "Dashboard Capteurs (SQLite)");
-    gtk_window_set_default_size(GTK_WINDOW(win), 980, 480);
-
-    GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
-    gtk_widget_set_margin_top(root, 18);
-    gtk_widget_set_margin_bottom(root, 18);
-    gtk_widget_set_margin_start(root, 18);
-    gtk_widget_set_margin_end(root, 18);
-
-    GtkWidget *main_title = gtk_label_new("Maison Intelligente");
-    gtk_widget_add_css_class(main_title, "header");
-    gtk_label_set_xalign(GTK_LABEL(main_title), 0.5f);
-    
     GtkWidget *header = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
-    GtkWidget *title = gtk_label_new("Dashboard capteurs");
-    gtk_widget_add_css_class(title, "header");
-    gtk_label_set_xalign(GTK_LABEL(title), 0.0f);
 
     GtkWidget *subtitle = gtk_label_new("Mise à jour automatique en temps réel");
     gtk_widget_add_css_class(subtitle, "sub");
     gtk_label_set_xalign(GTK_LABEL(subtitle), 0.0f);
 
-    gtk_box_append(GTK_BOX(header), title);
     gtk_box_append(GTK_BOX(header), subtitle);
 
     GtkWidget *grid = gtk_grid_new();
@@ -133,10 +119,167 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_add_css_class(GTK_WIDGET(G_ST->status_label), "status");
     gtk_label_set_xalign(G_ST->status_label, 0.0f);
 
-    gtk_box_append(GTK_BOX(root), main_title);
-    gtk_box_append(GTK_BOX(root), header);
-    gtk_box_append(GTK_BOX(root), grid);
-    gtk_box_append(GTK_BOX(root), GTK_WIDGET(G_ST->status_label));
+    gtk_box_append(GTK_BOX(page), header);
+    gtk_box_append(GTK_BOX(page), grid);
+    gtk_box_append(GTK_BOX(page), GTK_WIDGET(G_ST->status_label));
+
+    return page;
+}
+
+static void on_menu_dashboard_clicked(GtkButton *btn, gpointer user_data) {
+    (void)btn; (void)user_data;
+    if (G_STACK) {
+        gtk_stack_set_visible_child_name(GTK_STACK(G_STACK), "dashboard");
+    }
+}
+
+static void on_menu_home_clicked(GtkButton *btn, gpointer user_data) {
+    (void)btn; (void)user_data;
+    if (G_STACK) {
+        gtk_stack_set_visible_child_name(GTK_STACK(G_STACK), "placeholder");
+    }
+}
+
+static void on_menu_devices_clicked(GtkButton *btn, gpointer user_data) {
+    (void)btn; (void)user_data;
+    if (G_STACK) {
+        gtk_stack_set_visible_child_name(GTK_STACK(G_STACK), "devices");
+    }
+}
+
+static void on_activate(GtkApplication *app, gpointer user_data) {
+    (void)user_data;
+    if (!G_ST) return;
+
+    apply_css();
+
+    GtkWidget *win = gtk_application_window_new(app);
+    gtk_window_set_title(GTK_WINDOW(win), "Dashboard Capteurs (SQLite)");
+    gtk_window_set_default_size(GTK_WINDOW(win), 980, 520);
+
+    GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
+    gtk_widget_set_margin_top(root, 18);
+    gtk_widget_set_margin_bottom(root, 18);
+    gtk_widget_set_margin_start(root, 18);
+    gtk_widget_set_margin_end(root, 18);
+
+    // Barre de menu avec titre et bouton Dashboard centré
+    GtkWidget *menu_bar = gtk_center_box_new();
+    gtk_widget_add_css_class(menu_bar, "menu-bar");
+    gtk_widget_set_margin_bottom(menu_bar, 8);
+    gtk_widget_set_margin_start(menu_bar, 4);
+    gtk_widget_set_margin_end(menu_bar, 4);
+    gtk_widget_set_margin_top(menu_bar, 4);
+
+    // Zone de gauche: bouton Menu + Titre
+    GtkWidget *start_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *btn_home = gtk_button_new();
+    GtkWidget *home_icon = NULL;
+    const char *candidates[] = {
+        "assets/icons/home.svg",
+        "logicielMaison/assets/icons/home.svg",
+        NULL
+    };
+    for (int i = 0; candidates[i]; ++i) {
+        if (g_file_test(candidates[i], G_FILE_TEST_IS_REGULAR)) {
+            home_icon = gtk_image_new_from_file(candidates[i]);
+            gtk_widget_set_size_request(home_icon, 20, 20);
+            break;
+        }
+    }
+    if (!home_icon) {
+        home_icon = gtk_image_new_from_icon_name("home-symbolic");
+    }
+    gtk_button_set_child(GTK_BUTTON(btn_home), home_icon);
+    gtk_widget_set_tooltip_text(btn_home, "Menu");
+    g_signal_connect(btn_home, "clicked", G_CALLBACK(on_menu_home_clicked), NULL);
+    gtk_box_append(GTK_BOX(start_box), btn_home);
+
+    GtkWidget *lbl_title = gtk_label_new("Maison Intelligente");
+    gtk_widget_add_css_class(lbl_title, "menu-title");
+    gtk_center_box_set_start_widget(GTK_CENTER_BOX(menu_bar), start_box);
+    // Centre: Titre centré
+    gtk_center_box_set_center_widget(GTK_CENTER_BOX(menu_bar), lbl_title);
+
+    // Droite: espace réservé (pour équilibrer)
+    GtkWidget *end_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_center_box_set_end_widget(GTK_CENTER_BOX(menu_bar), end_box);
+
+    // Zone centrale avec un GtkStack (pour naviguer entre plusieurs pages si besoin)
+    G_STACK = GTK_STACK(gtk_stack_new());
+    gtk_stack_set_transition_type(G_STACK, GTK_STACK_TRANSITION_TYPE_CROSSFADE);
+
+    // Page d'accueil/placeholder avec une card centrale contenant un bouton Dashboard
+    GtkWidget *placeholder = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 24);
+    gtk_widget_set_hexpand(placeholder, TRUE);
+    gtk_widget_set_vexpand(placeholder, TRUE);
+    gtk_widget_set_halign(placeholder, GTK_ALIGN_CENTER);
+
+    // Card 1: Capteur -> Dashboard
+    GtkWidget *card1 = gtk_frame_new(NULL);
+    gtk_widget_add_css_class(card1, "card");
+    gtk_widget_set_halign(card1, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(card1, GTK_ALIGN_CENTER);
+    gtk_widget_set_size_request(card1, 650, 400);
+
+    GtkWidget *card1_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gtk_widget_set_margin_top(card1_box, 14);
+    gtk_widget_set_margin_bottom(card1_box, 14);
+    gtk_widget_set_margin_start(card1_box, 16);
+    gtk_widget_set_margin_end(card1_box, 16);
+
+    GtkWidget *btn_dashboard_card = gtk_button_new_with_label("Capteur");
+    gtk_widget_add_css_class(btn_dashboard_card, "card-value");
+    g_signal_connect(btn_dashboard_card, "clicked", G_CALLBACK(on_menu_dashboard_clicked), NULL);
+
+    gtk_box_append(GTK_BOX(card1_box), btn_dashboard_card);
+    gtk_frame_set_child(GTK_FRAME(card1), card1_box);
+
+    // Card 2: Objet connecté -> Nouvelle page
+    GtkWidget *card2 = gtk_frame_new(NULL);
+    gtk_widget_add_css_class(card2, "card");
+    gtk_widget_set_halign(card2, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(card2, GTK_ALIGN_CENTER);
+    gtk_widget_set_size_request(card2, 650, 400);
+
+    GtkWidget *card2_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gtk_widget_set_margin_top(card2_box, 14);
+    gtk_widget_set_margin_bottom(card2_box, 14);
+    gtk_widget_set_margin_start(card2_box, 16);
+    gtk_widget_set_margin_end(card2_box, 16);
+
+    GtkWidget *btn_devices_card = gtk_button_new_with_label("Objet connecté");
+    gtk_widget_add_css_class(btn_devices_card, "card-value");
+    g_signal_connect(btn_devices_card, "clicked", G_CALLBACK(on_menu_devices_clicked), NULL);
+
+    gtk_box_append(GTK_BOX(card2_box), btn_devices_card);
+    gtk_frame_set_child(GTK_FRAME(card2), card2_box);
+
+    gtk_box_append(GTK_BOX(placeholder), card1);
+    gtk_box_append(GTK_BOX(placeholder), card2);
+
+    gtk_stack_add_named(G_STACK, placeholder, "placeholder");
+
+    GtkWidget *dashboard = build_dashboard_view();
+    gtk_stack_add_named(G_STACK, dashboard, "dashboard");
+
+    // Page "Objet connecté"
+    GtkWidget *devices_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
+    GtkWidget *devices_sub = gtk_label_new("Gérez vos objets connectés");
+    gtk_widget_add_css_class(devices_sub, "sub");
+    gtk_label_set_xalign(GTK_LABEL(devices_sub), 0.0f);
+    gtk_box_append(GTK_BOX(devices_page), devices_sub);
+
+    GtkWidget *devices_body = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    gtk_box_append(GTK_BOX(devices_page), devices_body);
+
+    gtk_stack_add_named(G_STACK, devices_page, "devices");
+
+    // Par défaut: ne pas afficher le dashboard tant que l'utilisateur n'a pas cliqué
+    gtk_stack_set_visible_child_name(G_STACK, "placeholder");
+
+    gtk_box_append(GTK_BOX(root), menu_bar);
+    gtk_box_append(GTK_BOX(root), GTK_WIDGET(G_STACK));
 
     gtk_window_set_child(GTK_WINDOW(win), root);
     gtk_window_present(GTK_WINDOW(win));
